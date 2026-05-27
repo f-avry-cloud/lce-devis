@@ -156,23 +156,23 @@ export default function App() {
     (async () => {
       // Charger local
       const c = storageHelper.get('lce_cabinet', DEFAULT_CABINET);
-      const a = storageHelper.get('lce_avocats', DEFAULT_AVOCATS);
       setCabinet(c);
-      setAvocats(a);
-      setDevis(d => ({ ...d, avocatId: a[0]?.id || '' }));
 
       // Charger Supabase
       try {
-        const [pData, fData, hData] = await Promise.all([
+        const [aData, pData, fData, hData] = await Promise.all([
+          supabaseCall('avocats'),
           supabaseCall('prestations'),
           supabaseCall('frais_divers'),
           supabaseCall('historique_devis?order=created_at.desc'),
         ]);
 
+        if (aData) setAvocats(aData);
         if (pData) setPrestations(pData);
         if (fData) setFraisCatalogue(fData);
         if (hData) setHistorique(hData.map(h => ({ ...h, donnees_completes: typeof h.donnees_completes === 'string' ? JSON.parse(h.donnees_completes) : h.donnees_completes })));
         
+        setDevis(d => ({ ...d, avocatId: aData?.[0]?.id || '' }));
         setSyncStatus('ok');
       } catch (e) {
         console.error('Supabase sync failed:', e);
@@ -185,7 +185,6 @@ export default function App() {
 
   // Sauvegarde auto local
   useEffect(() => { if (loaded) storageHelper.set('lce_cabinet', cabinet); }, [cabinet, loaded]);
-  useEffect(() => { if (loaded) storageHelper.set('lce_avocats', avocats); }, [avocats, loaded]);
 
   function emptyDevis() {
     return {
@@ -694,6 +693,11 @@ function ParametresTab({ cabinet, setCabinet, avocats, setAvocats, prestations, 
     if (result !== null) setSyncMsg('✅ Mis à jour');
   }
 
+  async function updateAvocat(a) {
+    const result = await supabaseCall(`avocats?id=eq.${a.id}`, 'PATCH', a);
+    if (result !== null) setSyncMsg('✅ Avocat mis à jour');
+  }
+
   async function deleteP(id) {
     const result = await supabaseCall(`prestations?id=eq.${id}`, 'DELETE');
     if (result !== null) setPrestations(prestations.filter(p => p.id !== id));
@@ -702,6 +706,17 @@ function ParametresTab({ cabinet, setCabinet, avocats, setAvocats, prestations, 
   async function deleteF(id) {
     const result = await supabaseCall(`frais_divers?id=eq.${id}`, 'DELETE');
     if (result !== null) setFraisCatalogue(fraisCatalogue.filter(f => f.id !== id));
+  }
+
+  async function deleteA(id) {
+    const result = await supabaseCall(`avocats?id=eq.${id}`, 'DELETE');
+    if (result !== null) setAvocats(avocats.filter(a => a.id !== id));
+  }
+
+  async function addAvocat() {
+    const newA = { id: `av_${Date.now()}`, nom: 'Nouvel avocat', titre: '', email: '' };
+    const result = await supabaseCall('avocats', 'POST', newA);
+    if (result) setAvocats([...avocats, result[0] || newA]);
   }
 
   const subTabs = [
@@ -738,16 +753,16 @@ function ParametresTab({ cabinet, setCabinet, avocats, setAvocats, prestations, 
       )}
 
       {sub === 'avocats' && (
-        <Section title="Avocats signataires" actions={<button style={styles.btnPrimary} onClick={() => setAvocats([...avocats, { id: `av_${Date.now()}`, nom: 'Nouvel avocat', titre: '', email: '' }])}><Plus size={14} /></button>}>
+        <Section title="Avocats signataires (partagé)" actions={<button style={styles.btnPrimary} onClick={addAvocat}><Plus size={14} /></button>}>
           <table style={styles.table}>
             <thead><tr><th>Nom</th><th>Titre</th><th>Email</th><th style={{ width: 60 }}></th></tr></thead>
             <tbody>
               {avocats.map(a => (
                 <tr key={a.id}>
-                  <td style={styles.td}><input style={styles.inputBare} value={a.nom} onChange={e => setAvocats(avocats.map(x => x.id === a.id ? { ...x, nom: e.target.value } : x))} /></td>
-                  <td style={styles.td}><input style={styles.inputBare} value={a.titre} onChange={e => setAvocats(avocats.map(x => x.id === a.id ? { ...x, titre: e.target.value } : x))} /></td>
-                  <td style={styles.td}><input style={styles.inputBare} value={a.email} onChange={e => setAvocats(avocats.map(x => x.id === a.id ? { ...x, email: e.target.value } : x))} /></td>
-                  <td style={styles.td}><button style={styles.btnIcon} onClick={() => setAvocats(avocats.filter(x => x.id !== a.id))}><Trash2 size={14} /></button></td>
+                  <td style={styles.td}><input style={styles.inputBare} value={a.nom} onChange={e => { const u = { ...a, nom: e.target.value }; setAvocats(avocats.map(x => x.id === a.id ? u : x)); updateAvocat(u); }} /></td>
+                  <td style={styles.td}><input style={styles.inputBare} value={a.titre || ''} onChange={e => { const u = { ...a, titre: e.target.value }; setAvocats(avocats.map(x => x.id === a.id ? u : x)); updateAvocat(u); }} /></td>
+                  <td style={styles.td}><input style={styles.inputBare} value={a.email || ''} onChange={e => { const u = { ...a, email: e.target.value }; setAvocats(avocats.map(x => x.id === a.id ? u : x)); updateAvocat(u); }} /></td>
+                  <td style={styles.td}><button style={styles.btnIcon} onClick={() => deleteA(a.id)}><Trash2 size={14} /></button></td>
                 </tr>
               ))}
             </tbody>
