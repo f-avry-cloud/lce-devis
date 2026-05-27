@@ -479,7 +479,7 @@ function DevisTab({ devis, setDevis, cabinet, avocats, prestations, fraisCatalog
         }>
           <div style={styles.tableWrap}>
             <table style={styles.table}>
-              <thead><tr><th style={{ width: 36 }}></th><th>Prestation</th><th style={{ width: 80, textAlign: 'right' }}>Honoraires</th><th style={{ width: 80, textAlign: 'right' }}>Frais</th></tr></thead>
+              <thead><tr><th style={{ width: 36 }}></th><th>Prestation</th><th style={{ width: 140, textAlign: 'right' }}>Honoraires</th><th style={{ width: 120, textAlign: 'right' }}>Frais</th></tr></thead>
               <tbody>
                 {filteredPrestations.map(p => {
                   const checked = lignesIds.has(p.id);
