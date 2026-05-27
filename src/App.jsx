@@ -715,13 +715,20 @@ function ParametresTab({ cabinet, setCabinet, avocats, setAvocats, prestations, 
 
   async function addAvocat() {
     const newA = { id: `av_${Date.now()}`, nom: 'Nouvel avocat', titre: '', email: '' };
-    const result = await supabaseCall('avocats', 'POST', newA);
-    if (result) setAvocats([...avocats, result[0] || newA]);
+    // Ajouter localement d'abord
+    setAvocats([...avocats, newA]);
+    // Puis sauvegarder dans Supabase
+    try {
+      await supabaseCall('avocats', 'POST', newA);
+      setSyncMsg('✅ Avocat ajouté et synchronisé');
+    } catch (e) {
+      console.warn('Sync Supabase avocats:', e);
+    }
   }
 
   const subTabs = [
     { id: 'cabinet', label: 'Cabinet' },
-    { id: 'avocats', label: 'Avocats' },
+    { id: 'avocats', label: 'Avocats (partagé)' },
     { id: 'prestations', label: 'Prestations (partagé)' },
     { id: 'frais', label: 'Frais (partagé)' },
   ];
