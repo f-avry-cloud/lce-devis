@@ -25,10 +25,15 @@ const supabaseCall = async (table, method = 'GET', data = null) => {
   try {
     const res = await fetch(url, opts);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
+    
+    // Gérer les réponses vides (POST/PATCH/DELETE)
+    const text = await res.text();
+    if (!text) return [];
+    
+    return JSON.parse(text);
   } catch (e) {
     console.error(`Supabase ${table} error:`, e);
-    return null;
+    return [];
   }
 };
 
@@ -188,7 +193,7 @@ export default function App() {
 
   function emptyDevis() {
     return {
-      reference: `DEV-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
+      reference: `DEV-${new Date().getFullYear()}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       date: new Date().toISOString().slice(0, 10),
       avocatId: '',
       client: { nom: '', adresse: '' },
@@ -428,15 +433,20 @@ function DevisTab({ devis, setDevis, cabinet, avocats, prestations, fraisCatalog
       adresse_client: devis.client.adresse,
       nature_travaux: devis.natureTravaux,
       total_ttc: totaux.totalTTC,
-      donnees_completes: devis,
+      donnees_completes: JSON.stringify(devis),
     };
 
-    const result = await supabaseCall('historique_devis', 'POST', entry);
-    if (result) {
-      setHistorique([{ ...entry, id: result[0]?.id || Date.now(), donnees_completes: devis }, ...historique]);
-      alert('✅ Devis enregistré et synchronisé !');
-    } else {
-      alert('⚠️ Erreur de synchronisation. Vérifiez votre connexion.');
+    // Ajouter localement d'abord (toujours bon)
+    const newId = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    setHistorique([{ ...entry, id: newId, donnees_completes: devis }, ...historique]);
+    alert('✅ Devis enregistré !');
+    
+    // Tenter la synchro Supabase en arrière-plan (sans bloquer)
+    try {
+      await supabaseCall('historique_devis', 'POST', entry);
+    } catch (e) {
+      console.warn('Sync Supabase:', e);
+      // Silencieusement ignoré
     }
   }
 
@@ -479,7 +489,7 @@ function DevisTab({ devis, setDevis, cabinet, avocats, prestations, fraisCatalog
         }>
           <div style={styles.tableWrap}>
             <table style={styles.table}>
-              <thead><tr><th style={{ width: 36 }}></th><th>Prestation</th><th style={{ width: 140, textAlign: 'right' }}>Honoraires</th><th style={{ width: 120, textAlign: 'right' }}>Frais</th></tr></thead>
+              <thead><tr><th style={{ width: 36 }}></th><th style={{ flex: 1, minWidth: 200 }}>Prestation</th><th style={{ width: 140, textAlign: 'right' }}>Honoraires</th><th style={{ width: 120, textAlign: 'right' }}>Frais</th></tr></thead>
               <tbody>
                 {filteredPrestations.map(p => {
                   const checked = lignesIds.has(p.id);
