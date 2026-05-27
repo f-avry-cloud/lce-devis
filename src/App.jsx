@@ -101,6 +101,7 @@ function calcCessionFondsCommerce(prix) {
   } else {
     droit = (200000 - 23000) * 0.03 + (p - 200000) * 0.05;
   }
+  droit = Math.max(droit, 25); // Minimum 25€
   return Math.round(droit * 100) / 100;
 }
 
@@ -110,18 +111,23 @@ function calcCessionParts(prix, partsCedees, partsTotal) {
   const pt = Number(partsTotal) || 1;
   const abattement = 23000 * (pc / pt);
   const base = Math.max(0, p - abattement);
-  const droit = base * 0.03;
+  let droit = base * 0.03;
+  droit = Math.max(droit, 25); // Minimum 25€
   return { droit: Math.round(droit * 100) / 100, abattement: Math.round(abattement * 100) / 100, base: Math.round(base * 100) / 100 };
 }
 
 function calcCessionActions(prix) {
   const p = Number(prix) || 0;
-  return Math.round(p * 0.001 * 100) / 100;
+  let droit = p * 0.001;
+  droit = Math.max(droit, 25); // Minimum 25€
+  return Math.round(droit * 100) / 100;
 }
 
 function calcCessionImmeubleSocietes(prix) {
   const p = Number(prix) || 0;
-  return Math.round(p * 0.05 * 100) / 100;
+  let droit = p * 0.05;
+  droit = Math.max(droit, 25); // Minimum 25€
+  return Math.round(droit * 100) / 100;
 }
 
 // ============================================================================
